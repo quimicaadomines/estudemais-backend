@@ -159,7 +159,7 @@ Não recomende automaticamente aumentar a carga horária quando houver dificulda
 9. COMUNICAÇÃO
 ────────────────────────────────────
 
-Seja claro, natural e objective.
+Seja claro, natural e objetivo.
 
 Adapte a profundidade da resposta à necessidade da tarefa.
 
@@ -231,11 +231,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // MODELOS OFICIAIS VIGENTES DA API DO GOOGLE GEMINI
+    // MODELOS ATIVOS DA FAMÍLIA GEMINI 3.X DO GOOGLE
     const models = [
-      'gemini-2.5-flash',
-      'gemini-1.5-flash',
-      'gemini-2.5-pro',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.1-pro',
     ];
     let lastErrorMessage = '';
 
