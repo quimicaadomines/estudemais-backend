@@ -1,0 +1,9 @@
+{
+  "name": "estudemais-backend",
+  "version": "1.0.0",
+  "description": "Backend Serverless Vercel da IA do Estude+",
+  "private": true,
+  "scripts": {
+    "start": "node api/gemini.js"
+  }
+}
