@@ -180,7 +180,7 @@ Não substitua professores, profissionais ou fontes oficiais quando a situação
 Quando houver incerteza factual, deixe a incerteza clara em vez de inventar uma resposta.`;
 
 export default async function handler(req, res) {
-  // Configuração de cabeçalhos de permissão CORS para Flutter Web e Mobile
+  // Configuração de cabeçalhos de permissão CORS para o Flutter Web e Mobile
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader(
@@ -231,54 +231,75 @@ export default async function handler(req, res) {
       });
     }
 
-    // CHAMADA DIRETA E VELOZ AO ALIAS ESTÁVEL 'gemini-flash'
-    const model = 'gemini-flash';
-    const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // MODELOS OFICIAIS NA ORDEM ESCOLHIDA: 3.7 FLASH E 2.5 FLASH
+    const models = ['gemini-3.7-flash', 'gemini-2.5-flash'];
 
-    const response = await fetch(googleApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }],
-        },
-        contents: [
+    let lastErrorMessage = '';
+    let lastErrorDetails = '';
+
+    for (const model of models) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           {
-            role: 'user',
-            parts: [{ text: finalPrompt }],
-          },
-        ],
-      }),
-    });
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify({
+              system_instruction: {
+                parts: [{ text: SYSTEM_INSTRUCTION }],
+              },
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: finalPrompt }],
+                },
+              ],
+            }),
+          }
+        );
 
-    if (response.status === 200) {
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (text) {
-        return res.status(200).json({ response: text, modelUsed: model });
+        clearTimeout(timeoutId);
+
+        if (response.status === 200) {
+          const data = await response.json();
+          const text =
+            data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (text) {
+            return res.status(200).json({ response: text, modelUsed: model });
+          }
+        } else if (response.status === 429) {
+          lastErrorMessage =
+            'A cota temporária por minuto do Gemini foi atingida (Erro 429). Por favor, aguarde alguns segundos.';
+          break;
+        } else {
+          const errBody = await response.text();
+          lastErrorDetails = `Status ${response.status} no modelo ${model}: ${errBody}`;
+          console.error(
+            `Erro na API do Gemini (${model}): ${response.status}`,
+            errBody
+          );
+        }
+      } catch (err) {
+        console.error(`Exceção no modelo (${model}):`, err);
+        lastErrorMessage = err.message;
+        lastErrorDetails = err.stack || err.message;
       }
-    } else if (response.status === 429) {
-      return res.status(429).json({
-        error:
-          'A cota temporária por minuto do Gemini foi atingida (Erro 429). Por favor, aguarde alguns segundos.',
-      });
-    } else {
-      const errBody = await response.text();
-      console.error(`Erro na API do Gemini (${model}): ${response.status}`, errBody);
-      return res.status(response.status).json({
-        error: `Erro retornado pela Google AI: ${response.status}`,
-        details: errBody,
-      });
     }
 
     return res.status(500).json({
-      error: 'Não foi possível obter resposta do servidor Gemini.',
+      error:
+        lastErrorMessage ||
+        'Não foi possível obter resposta dos servidores do Google Gemini no momento.',
+      details: lastErrorDetails,
     });
   } catch (error) {
-    console.error('Exceção no handler da Vercel:', error);
     return res.status(500).json({ error: error.message });
   }
 }
