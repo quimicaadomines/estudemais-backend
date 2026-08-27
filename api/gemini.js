@@ -231,13 +231,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // LISTA COMPLETA DE MODELOS COM ALIASES AUTOMÁTICOS E FALLBACK
+    // LISTA DE MODELOS COM ALIAS CANÔNICO 'gemini-flash' NO TOPO
     const models = [
-      'gemini-3.7-flash',
-      'gemini-3.6-flash',
+      'gemini-flash',
+      'gemini-flash-latest',
       'gemini-2.5-flash',
       'gemini-2.0-flash',
-      'gemini-flash-latest',
+      'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-pro',
       'gemini-1.5-flash-latest',
       'gemini-1.5-flash',
       'gemini-2.5-pro',
