@@ -231,14 +231,21 @@ export default async function handler(req, res) {
       });
     }
 
-    // MODELOS ATIVOS DA FAMÍLIA GEMINI 3.X DO GOOGLE
+    // LISTA COMPLETA DE MODELOS COM ALIASES AUTOMÁTICOS E FALLBACK
     const models = [
+      'gemini-3.7-flash',
       'gemini-3.6-flash',
-      'gemini-3.5-flash-lite',
-      'gemini-3.5-flash',
-      'gemini-3.1-pro',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-flash-latest',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash',
+      'gemini-2.5-pro',
+      'gemini-1.5-pro-latest'
     ];
+
     let lastErrorMessage = '';
+    let lastErrorDetails = '';
 
     for (const model of models) {
       try {
@@ -269,22 +276,24 @@ export default async function handler(req, res) {
           const text =
             data.candidates?.[0]?.content?.parts?.[0]?.text || '';
           if (text) {
-            return res.status(200).json({ response: text });
+            return res.status(200).json({ response: text, modelUsed: model });
           }
         } else if (response.status === 429) {
           lastErrorMessage =
-            'A cota temporária por minuto do Gemini foi atingida (Erro 429). Por favor, aguarde 30 segundos.';
+            'A cota temporária por minuto do Gemini foi atingida (Erro 429). Por favor, aguarde alguns segundos.';
           break;
         } else {
           const errBody = await response.text();
+          lastErrorDetails = `Status ${response.status} no modelo ${model}: ${errBody}`;
           console.error(
             `Erro na API do Gemini (${model}): ${response.status}`,
             errBody
           );
         }
       } catch (err) {
-        console.error(`Exceção (${model}):`, err);
+        console.error(`Exceção no modelo (${model}):`, err);
         lastErrorMessage = err.message;
+        lastErrorDetails = err.stack || err.message;
       }
     }
 
@@ -292,6 +301,7 @@ export default async function handler(req, res) {
       error:
         lastErrorMessage ||
         'Não foi possível obter resposta dos servidores do Google Gemini no momento.',
+      details: lastErrorDetails,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
